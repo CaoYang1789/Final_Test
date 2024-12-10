@@ -2,12 +2,12 @@ from typing import Dict
 import os
 import sys
 
-# 添加 HW-NAS-Bench 的路径
-hw_nas_bench_path = "/home/test0/HW-NAS-Bench"  # 请根据实际路径修改
+# Add HW-NAS-Bench path
+hw_nas_bench_path = "/home/test0/HW-NAS-Bench"  # modify by yourself
 if hw_nas_bench_path not in sys.path:
     sys.path.append(hw_nas_bench_path)
 
-# 确保其他模块正常导入
+# Ensure that other modules are imported properly
 from nas_201_api import NASBench201API as API201
 import models
 from models import NB101Network
@@ -23,7 +23,7 @@ from ptflops import get_model_complexity_info
 from measures import get_grad_score, get_ntk_n, get_batch_jacobian, get_logdet, get_zenscore, calculate_nrs, get_new_score
 import json
 
-# 导入 HWNASBenchAPI
+# Import HWNASBenchAPI
 from hw_nas_bench_api import HWNASBenchAPI as HWAPI
 
 parser = argparse.ArgumentParser(description='ZS-NAS')
@@ -51,40 +51,34 @@ args = parser.parse_args()
 
 def get_hardware_metrics(api, netid, dataset):
     """
-    从 HW-NAS-Bench 获取指定网络架构在目标数据集上的所有硬件性能指标。
+    Gets all hardware performance metrics for the specified network architecture on the target dataset from HW-NAS-Bench.
 
-    参数:
-        api: HW-NAS-Bench 的 API 实例。
-        netid: 网络的索引。
-        dataset: 数据集名称（如 'cifar10'）。
+    Parameters:
+    api: An API instance of HW-NAS-Bench.
+    netid: indicates the index of the network.
+    dataset: The name of the dataset (such as 'cifar10').
 
-    返回:
-        一个嵌套字典，格式为:
-        {
-            'edgegpu': {'latency': 5.8074, 'energy': 24.2266},
-            'raspi4': {'latency': 10.482, 'energy': None},
-            ...
-        }
+    Back:
+    A nested dictionary of the format:
+    {
+    'edgegpu: {' latency' : 5.8074, 'energy' : 24.2266},
+    'raspi4': {'latency': 10.482, 'energy': None},
+    ...
+    }
     """
-    # 查询原始数据
-    metrics = api.query_by_index(netid, dataset)
 
-    # 初始化结果字典
+    metrics = api.query_by_index(netid, dataset)
     result = {}
 
-    # 遍历原始数据
     for k, v in metrics.items():
         if "_latency" in k or "_energy" in k:
             metric_type = "latency" if "_latency" in k else "energy"
-            hardware = k.replace(f"_{metric_type}", "")  # 提取硬件名称
+            hardware = k.replace(f"_{metric_type}", "")  
             if hardware not in result:
-                result[hardware] = {"latency": None, "energy": None}  # 初始化默认值为 None
-            result[hardware][metric_type] = round(v, 4)  # 四舍五入到 4 位小数
-    # print("EdgeGPU Latency:", formatted_metrics['edgegpu']['latency'])  # 输出: 5.8074
-    # print("EdgeGPU Energy:", formatted_metrics['edgegpu']['energy'])  # 输出: 24.2266
-
-    # 访问 raspi4 的 energy（不存在）
-    # print("Raspi4 Energy:", formatted_metrics['raspi4']['energy'])  # 输出: None
+                result[hardware] = {"latency": None, "energy": None}  
+            result[hardware][metric_type] = round(v, 4)  
+    # print("EdgeGPU Latency:", formatted_metrics['edgegpu']['latency'])  # print: 5.8074
+    # print("EdgeGPU Energy:", formatted_metrics['edgegpu']['energy'])  # print: 24.2266
     return result
 
 
@@ -130,23 +124,23 @@ def getmisc(args):
 
 def search201(api, netid, dataset):
     """
-    查询网络性能，并遍历输出所有支持硬件的延迟值（包含硬件名和延迟）。
-    
-    参数:
-        api: NATS-Bench 的 API 实例
-        netid: 网络索引
-        dataset: 数据集名称（如 'cifar10'）
-    
-    返回:
-        网络模型、性能指标（包括延迟信息列表）、邻接矩阵、操作列表
+    Queries network performance and iterates output latency values (including hardware name and latency) for all supported hardware.
+
+    Parameters:
+    api: An API instance of NTS-Bench
+    netid: indicates the network index
+    dataset: Name of the dataset (e.g. 'cifar10')
+
+    Back:
+    Network model, performance metrics (including delay information list), adjacency matrix, operation list
     """
     if dataset == 'cifar10':
         dsprestr = 'ori'
     else:
         dsprestr = 'x'
 
-    # 查询网络的训练结果
-    results = api.query_by_index(netid, dataset, hp='200')  # 获取网络的完整评估结果
+    # Query the training result of the network
+    results = api.query_by_index(netid, dataset, hp='200')  # Get a complete evaluation of your network
     train_loss, train_acc, test_loss, test_acc = 0, 0, 0, 0
 
     for seed, result in results.items():
@@ -155,27 +149,26 @@ def search201(api, netid, dataset):
         test_loss += result.get_eval('ori-test')['loss']
         test_acc += result.get_eval('ori-test')['accuracy']
 
-    # 计算平均值
+    
     num_trials = len(results)
     train_loss /= num_trials
     train_acc /= num_trials
     test_loss /= num_trials
     test_acc /= num_trials
 
-    # 获取网络配置信息
+    
     config = api.get_net_config(netid, dataset)
     arch_str = config['arch_str']
     adjacency = api.str2matrix(arch_str)
     operations = api.str2lists(arch_str)
 
-    # 实例化网络模型
+    # Instantiate the network model
     network = models.get_cell_based_tiny_net(config)
 
-    # 查询支持的硬件设备
+    # Obtain hardware device information
     hw_api = HWAPI("/home/test0/HW-NAS-Bench/HW-NAS-Bench-v1_0.pickle", search_space="nasbench201")
     latency_matric = get_hardware_metrics(hw_api, netid, dataset)
 
-    # 返回结果
     return network, [train_acc, train_acc, test_loss, test_acc], adjacency, operations, latency_matric
 
 
@@ -212,14 +205,13 @@ def search201(api, netid, dataset):
 
 def parse_architecture(arch_str):
     """
-    解析架构字符串为邻接矩阵和操作列表。
-    假设 arch_str 是用 '|' 分隔的操作名称，例如 "nor_conv_3x3|skip_connect|avg_pool_3x3"。
+    Parse schema strings into adjacency matrices and action lists.
+    Assume that arch_str is an operation name separated by '|', for example, "nor_conv_3x3|skip_connect|avg_pool_3x3".
     """
-    # 分割操作名称
+
     operations = arch_str.split("|")
     num_nodes = len(operations)
 
-    # 构建邻接矩阵，假设为完全有向图
     adjacency = np.array([[1 if i < j else 0 for j in range(num_nodes)] for i in range(num_nodes)])
 
     return adjacency, operations
@@ -236,7 +228,7 @@ def get101acc(data_dict:dict):
 
 def save_network_structure(netid, adjacency, operations, save_path="saved_networks"):
     """
-    保存网络的架构到JSON文件中。
+    Save the network architecture to a JSON file.
     """
     os.makedirs(save_path, exist_ok=True)
     file_path = os.path.join(save_path, f"network_{netid}.json")
@@ -254,31 +246,31 @@ def save_network_structure(netid, adjacency, operations, save_path="saved_networ
 
 def calculate_score(api,A, 
                     netid,
-                    args, #nrs 要用
-                    network, #nrs 要用
-                    metrics, #basic 要用 准确度
-                    macs, #basic 要用
-                    params, #basic 要用
-                    data, #nrs 要用
-                    label, #nrs 要用
-                    imgsize, #nrs 要用
-                    ce_loss,#nrs 要用
+                    args,
+                    network, 
+                    metrics, 
+                    macs, 
+                    params, 
+                    data, 
+                    label, 
+                    imgsize, 
+                    ce_loss,
                     latency_matrics,
-                    grad_weights,#nrs 要用
+                    grad_weights,
                     alpha=1.0, beta=0.5, gamma=0.3, delta=0.05, repeat=3, zen_metric="avg"):
     """
-    根据输入值 A 的类型计算得分，初步实现 `basic` 类型计算，其他情况留空。
-    
-    参数:
-        A (str): 唯一输入值，决定具体的计算类型。
-        network: 神经网络模型，需包含 `test_acc`、`macs` 和 `params` 属性。
-        alpha, beta, gamma: 计算得分的权重参数。
-        其他参数保留以支持未来扩展。
-    
-    返回:
-        network: 更新了 `score` 属性的网络模型。
+    The score is calculated according to the type of the input value A, and the 'basic' type is preliminarily realized, and other cases are left blank.
+
+    Parameters:
+    A (str): Unique input value that determines the specific type of calculation.
+    network: The neural network model, which must contain the 'test_acc', 'macs' and' params' attributes.
+    alpha, beta, gamma: Calculate the weight parameters of the score.
+    Other parameters are retained to support future expansion.
+
+    Back:
+    network: Updated the network model with the 'score' attribute.
     """
-    test_acc = metrics[3]  # 获取测试准确率
+    test_acc = metrics[3]  
     if A == "basic":
         score= (alpha * test_acc - beta * np.log10(macs) - gamma * np.log10(params))
         return score
@@ -299,48 +291,48 @@ def calculate_score(api,A,
     
 def get_metric_feedback(api,args, netid, network, metrics, imgsize, adjacency, operations, latency_matrics, top_k_list, data, label, ce_loss, grad_weights,space='cv'):
     """
-    修改后的get_basic函数，记录所有网络的信息，并更新top_k_list，包含完整的Latency信息。
+    The modified get_basic function logs all network information and updates the top_k_list to include the full Latency information.
     """
     if space == 'cv':
-        # 计算模型的复杂性指标（MACs和参数数量）
+        # Calculate the complexity indicators of the model (MACs and number of parameters)
         macs, params = get_model_complexity_info(network, (3, imgsize, imgsize), as_strings=False,
                                                  print_per_layer_stat=False, verbose=False)
         
-        # 提取 GPU 延迟，或计算平均延迟
-        hardware = "GPU" #这个地方可以替换 换成想要的device
-        score=calculate_score(api,args.metric,netid, args, #nrs 要用
-                                network, #nrs 要用
-                                metrics, #basic 要用
-                                macs, #basic 要用
-                                params, #basic 要用
-                                data, #nrs 要用
-                                label, #nrs 要用
-                                imgsize, #nrs 要用
-                                ce_loss,#nrs 要用
-                                latency_matrics, #lp要用
-                                grad_weights,#nrs 要用
+        
+        hardware = "GPU" #No need actually
+        score=calculate_score(api,args.metric,netid, args, 
+                                network,
+                                metrics, 
+                                macs, 
+                                params, 
+                                data, 
+                                label, 
+                                imgsize,
+                                ce_loss,
+                                latency_matrics, 
+                                grad_weights,
                                 alpha=1.0, beta=0.5, gamma=0.3, delta=0.3, repeat=3, zen_metric="avg")
-        # 保存网络的所有信息，包括Latency
+        # Save all information about the network
         if metrics[3] > 93.7:
             top_k_list.append({
                 'score': score,
                 'netid': netid,
                 'macs': macs,
                 'params': params,
-                'metrics': metrics,  # 完整的性能指标，包括训练和测试信息
-                'adjacency': adjacency,  # 保存邻接矩阵
-                'operations': operations,  # 保存操作列表
-                'latency': latency_matrics  # 保存完整的Latency信息
+                'metrics': metrics,  
+                'adjacency': adjacency,  
+                'operations': operations,  
+                'latency': latency_matrics  
             })
-        top_k_list.sort(key=lambda x: x['score'], reverse=True)  # 按score 降序排序
+        top_k_list.sort(key=lambda x: x['score'], reverse=True)  # Sort by score in descending order
         print("test1 for output")
-        top_k_list = top_k_list[:10]  # 截取前 10 个
+        top_k_list = top_k_list[:10]  # Intercept the first 10 to avoid memory explosion
     return top_k_list
 
     
 def enumerate_networks(args):
     imgsize, ce_loss, trainloader, testloader = getmisc(args)
-    top_k_list = []  # 存储符合条件的网络
+    top_k_list = []  
     print("2 successfully.")
     
     
@@ -354,10 +346,10 @@ def enumerate_networks(args):
             data,label=data.cuda(),label.cuda()
             break
         
-        # for netid in groupIDs:  # 遍历 groupIDs 数组
+        
         for netid in groupIDs:
             print(f"Processing network {netid}")
-            # 使用 search201 函数获取网络实例和相关信息
+            
             network, metrics, adjacency, operations, latency_matric = search201(api, netid, args.dataset)
             train_acc, val_acc, test_loss, test_acc = metrics
             network.cuda()
@@ -419,7 +411,7 @@ def enumerate_networks(args):
 
         for netid in range(1000):
             print(f"Processing network {netid}")
-            # 使用 search201 函数获取网络实例和相关信息
+            
             network, metrics, adjacency, operations, latency_matric= search201(api, netid, args.dataset)
             train_acc, val_acc, test_loss, test_acc= metrics
             network.cuda()
@@ -429,18 +421,7 @@ def enumerate_networks(args):
             top_k_list=get_metric_feedback(api,args, netid, network, metrics, imgsize, adjacency, operations, latency_matric, top_k_list, data, label, ce_loss, grad_weights)
             
                 
-                
-                # zen_score = get_zenscore(network, imgsize, args.batchsize)#未发现问题 201用时：几分钟
-                # print(f"Zen Score: {zen_score}")
-                # ntk = get_ntk_n(trainloader, network, train_mode=True, num_batch=1)#可能有问题  201用时：15分钟
-                # print(f"NTK Condition Number: {ntk}")
-                
-                # logdet_k = get_logdet(network, args, data, label)#有问题 输出-inf，不知道是什么  201用时：几分钟
-                # print(f"Log-determinant (logdet_k): {logdet_k}")
-                
-                # grad_sensitivity = get_grad_score( network, data, label, ce_loss, split_data=1, device='cuda')#未发现问题
-                # print(f"Gradient Sensitivity: {grad_sensitivity}")
-                    
+
                         
                         
   
@@ -498,8 +479,8 @@ def enumerate_networks(args):
             save_network_structure(net['netid'], net['adjacency'], net['operations'])
             print(f"Saved network {net['netid']} with score {net['score']:.4f}")
     else:
-    # 计算平均分并打印
-        if top_k_list:  # 确保列表非空
+    
+        if top_k_list: 
             average_score = sum(net['score'] for net in top_k_list) / len(top_k_list)
             print(f"{args.testName} NRS score is ：{average_score:.4f}")
         else:
@@ -546,7 +527,7 @@ if __name__ == '__main__':
     enumerate_networks(args)
     
     # imgsize, ce_loss, trainloader, testloader = getmisc(args)
-    # top_k_list = []  # 存储符合条件的网络
+    # top_k_list = []  
     # print("2 successfully.")
     
     
