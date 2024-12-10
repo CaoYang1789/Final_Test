@@ -323,29 +323,14 @@ def calculate_nrs(model, data, label, resolution, batch_size, loss_fn, grad_weig
     if zen_score <= 0:
         zen_score = 1e-6
 
-    # ??? NTK ??????
-    #ntk_values = [get_ntk_n(dataloader, model) for _ in range(repeat)]
-    #ntk_cond = np.mean(ntk_values)
-    #if ntk_cond == 0:
-    #    ntk_cond = 1e-6
-    #ntk_stability = 1.0 / ntk_cond
-
-    # ??? Log Determinant
-    # 在 calculate_nrs() 函数中，创建一个新的变量来传递给 get_logdet()
-    #args_dict = {'batchsize': batch_size, 'resolution': resolution}
-    #logdet_k = get_logdet(model, args_dict, data, label)
-
-    #args = {'batchsize': batch_size, 'resolution': resolution}
-    #logdet_k = get_logdet(model, args, data, label)
     
-    # ??? Gradient Sensitivity
     grad_scores = enum_gradient_measure(model, device='cuda', data=data, label=label, loss_fn=loss_fn, space='cv')
-    # ???????????δ????????????
+
     if grad_weights is None:
-        grad_weights = np.ones(len(grad_scores)) / len(grad_scores)  # ????????
+        grad_weights = np.ones(len(grad_scores)) / len(grad_scores)  
     assert len(grad_weights) == len(grad_scores), f"Length mismatch: grad_weights({len(grad_weights)}) and grad_scores({len(grad_scores)})"
     
-     # ??????????????
+
     std_grad_scores = np.std(grad_scores)
     if std_grad_scores == 0:
         std_grad_scores = 1e-6
@@ -353,22 +338,7 @@ def calculate_nrs(model, data, label, resolution, batch_size, loss_fn, grad_weig
 
     gradient_sensitivity = np.sum(grad_weights * normalized_scores)
 
-    # ?????? NRS
-    #log_zen = torch.log(torch.tensor(zen_score))
-    #nrs = (
-    #    alpha * float(log_zen) +
-    #    beta * float(ntk_stability) +
-    #    gamma * float(logdet_k) -
-    #    delta * float(gradient_sensitivity)
-    #)
-
-      # ?????? NRS
-    #log_zen = torch.log(torch.tensor(zen_score))
-    #nrs = (
-    #    alpha * float(log_zen) +
-    #    gamma * float(logdet_k) -
-    #    delta * float(gradient_sensitivity)
-    #)
+   
 
     log_zen = torch.log(torch.tensor(zen_score))
     nrs = (
@@ -385,7 +355,7 @@ def get_new_score(latency_matrics,params, macs, test_acc, args,netid,api):
     from main import search201
 
     imgsize, ce_loss, trainloader, testloader = getmisc(args)
-    top_k_list = []  # 存储符合条件的网络
+    top_k_list = []  
 
     
     for i, batch in enumerate(trainloader):
@@ -398,35 +368,33 @@ def get_new_score(latency_matrics,params, macs, test_acc, args,netid,api):
     network.cuda()
     # zen_score=get_zenscore(network, imgsize, args.batchsize)
     # print(f"Log-determinant (logdet_k): {zen_score}")
-    #得到参数
+    
     zen_score = get_zenscore(network, imgsize, args.batchsize)
     grad_sensitivity=get_grad_score(network,  data, label, ce_loss, split_data=1, device='cuda')
     # print(f"zen_score : {zen_score }, type: {type(zen_score )}")
     # (143.10256958007812, 0.0, 0.0)
     # print(f"grad_sensitivity: {grad_sensitivity}, type: {type(grad_sensitivity)}")
     # [5.596492290496826, 140.700927734375, -0.724810004234314, 0.11414037644863129, -301.7180719350535, 5.285810470581055, 254.1832782289741]
-#############################以上为参数部分#################################################################
 
-    
-    # 设置权重
+
     zen_value = zen_score[0]  # 使用 zen_score 的第一个值
     grad_mean = np.mean(grad_sensitivity)  # 计算梯度的均值
     grad_std = np.std(grad_sensitivity)  # 计算梯度的标准差
     grad_abs_mean = np.abs(grad_mean)  # 均值的绝对值
 
-    # 设置权重
-    w1, w2, w3, w4, w5 = 1, -0.5, -0.4,  -2, 1
-                             #zen  grd    grd       energy acc           
 
-    # 评分公式
+    w1, w2, w3, w4, w5 = 0.4, -0.5, -0.4,  -1, 0.6
+        
+
+
     score = (
-        w1 * zen_value +              # zen_score 的权重
-        w2 * grad_std +                # 梯度标准差的权重（越小越好）
-        w3 * grad_abs_mean +     # 梯度均值绝对值的权重（越接近 0 越好）
-        w4 *latency_matrics['edgegpu']['energy'] + #能耗越低越好
+        w1 * zen_value +              
+        w2 * grad_std +                
+        w3 * grad_abs_mean +     
+        w4 *latency_matrics['edgegpu']['energy'] + 
         w5* test_acc
     )
+    print(f"score: {score}")
 
-    #score = zen_score[0] + grad_sensitivity[0]+ test_acc + np.log10(params) + np.log10(macs)
     return score
 
