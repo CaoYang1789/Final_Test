@@ -17,6 +17,7 @@ In the final part, we modified the Zero and HWNASBench libraries to achieve our 
 **Details of the design approach can be found in the report.**
 
 ---
+## Instruction set
 
 ### **Step P1: Check GPU Availability**
 
@@ -201,4 +202,10 @@ nats_dir = "/home/test0/dataset/nasbench/NATS/"
 ```
 
 ---
+## Results and Analysis
+Both Basic and LP models successfully identified ten optimal architectures, which were scored using the NRS metric. The LP model achieved higher scores, as expected, due to its consideration of latency, a factor directly linked to edgeGPU hardware. This consideration theoretically increases energy consumption and gradient-related scores. Notably, there was an intentional overlap in the architectures selected by both methods. This was achieved using accuracy-based pre-filters and strict latency weight constraints to avoid biasing selection toward a single metric, thereby preventing performance degradation in other areas. The design successfully identified architectures better suited to specific hardware.
+![image](https://github.com/user-attachments/assets/041b8475-dfd3-4557-9c26-8e375dae1f6e)
 
+
+## Limitations and Future Work
+The scoring formula's reliance on linear combinations, while flexible for weight adjustments, introduces key issues. It depends on manual weight tuning, is prone to local optima, and is sensitive to outliers. Future work should emphasize filter-based mechanisms to prevent performance collapse and develop a more robust LP scoring method, better capturing device-specific performance while avoiding the rigidity of linear combination approaches.
