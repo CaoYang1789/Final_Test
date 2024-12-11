@@ -377,10 +377,10 @@ def get_new_score(latency_matrics,params, macs, test_acc, args,netid,api):
     # [5.596492290496826, 140.700927734375, -0.724810004234314, 0.11414037644863129, -301.7180719350535, 5.285810470581055, 254.1832782289741]
 
 
-    zen_value = zen_score[0]  # 使用 zen_score 的第一个值
-    grad_mean = np.mean(grad_sensitivity)  # 计算梯度的均值
-    grad_std = np.std(grad_sensitivity)  # 计算梯度的标准差
-    grad_abs_mean = np.abs(grad_mean)  # 均值的绝对值
+    zen_value = zen_score[0]  
+    grad_mean = np.mean(grad_sensitivity)  
+    grad_std = np.std(grad_sensitivity)  
+    grad_abs_mean = np.abs(grad_mean)  
 
 
     w1, w2, w3, w4, w5 = 0.4, -0.5, -0.4,  -1, 0.6
