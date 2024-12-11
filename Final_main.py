@@ -108,7 +108,7 @@ def getmisc(args):
         imgsize=16
     
 
-    #根据用户指定的数据集（如 CIFAR-10），加载训练和测试数据。
+
     train_data, test_data, xshape, class_num = datasets.get_datasets(args.dataset, root, args.cutout)
 
     trainloader = torch.utils.data.DataLoader(
@@ -172,34 +172,7 @@ def search201(api, netid, dataset):
     return network, [train_acc, train_acc, test_loss, test_acc], adjacency, operations, latency_matric
 
 
-# def search_nats(api, netid, dataset, hpval):
-#     """
-#     查询 NATS-size 搜索空间中的网络信息。
-#     """
-#     # 获取网络性能指标
-#     info = api.get_more_info(netid, dataset, hp=hpval)
-#     test_acc = info['test-accuracy']
-#     test_loss = info['test-loss'] if 'test-loss' in info else None
-#     train_acc = info['train-accuracy'] if 'train-accuracy' in info else None
-#     train_loss = info['train-loss'] if 'train-loss' in info else None
 
-#     # 获取网络配置
-#     config = api.get_net_config(netid, dataset)
-
-#     # 实例化网络
-#     network = models.get_cell_based_tiny_net(config)
-
-#     # 获取架构字符串
-#     arch_str = api.meta_archs[netid]
-
-#     # 自定义解析架构字符串为邻接矩阵和操作列表
-#     adjacency, operations = parse_architecture(arch_str)
-
-#     # 构造 metrics，符合 get_basic 的需求
-#     metrics = [train_loss, train_acc, test_loss, test_acc]
-    
-#     # 返回结果(加了test_acc)
-#     return network, test_acc, metrics, adjacency, operations
 
 
 
