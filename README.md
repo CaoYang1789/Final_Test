@@ -1,6 +1,6 @@
 # Final Modifications in Zero and HWNASBench Libraries
 
-In the final part, we modified the Zero and HWNASBench libraries to achieve our goals. We updated the `main.py` file and the `__init__.py` file in the Measure section of Zero to ensure no conflict with the existing functionality. The modifications are summarized as follows:
+In the final part, we modified the Zero and HWNASBench libraries to achieve our goals. We updated the `main.py` file and the `__init__.py` file in the Measure section(measure/init) of Zero to ensure no conflict with the existing functionality. The modifications are summarized as follows:
 
 ### Modifications in `main.py`:
 1. Introduced `HW_NAS_Bench_api` to obtain architecture latency and energy consumption on specific hardware.
